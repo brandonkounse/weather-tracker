@@ -1,40 +1,32 @@
-package main
+package client
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
-	"os"
-
-	"github.com/joho/godotenv"
+	"weather-tracker/api"
+	"weather-tracker/config"
 )
 
-const (
-	URL_CURRENT = "http://api.weatherstack.com/current"
-)
+func GetCurrentWeatherByLocation(city string) (*api.Current, error) {
+	urlCurrentWeather := "http://api.weatherstack.com/current"
 
-// TODO standup a MVP, will refactor into proper files later
-func main() {
-	err := godotenv.Load()
+	apiKey, err := config.GetAPIKey()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		return &api.Current{}, err
 	}
 
-	apiKey := os.Getenv("API_KEY")
-	if apiKey == "" {
-		log.Fatal("API_KEY is empty")
-	}
-
-	u, err := url.Parse(URL_CURRENT)
+	u, err := url.Parse(urlCurrentWeather)
 	if err != nil {
 		log.Fatal("invalid base URL:", err)
 	}
 
 	q := u.Query()
 	q.Set("access_key", apiKey)
-	q.Set("query", "Austin")
+	q.Set("query", city)
 	u.RawQuery = q.Encode()
 
 	reqURL := u.String()
@@ -57,4 +49,12 @@ func main() {
 	}
 
 	fmt.Println(string(bodyBytes))
+
+	var apiCurrent api.Current
+
+	if err := json.NewDecoder(resp.Body).Decode(&apiCurrent); err != nil {
+		return &api.Current{}, err
+	}
+
+	return &apiCurrent, nil
 }
